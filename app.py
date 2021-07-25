@@ -46,7 +46,7 @@ def results_view():
         endpoint = get_redirect()
         return redirect(endpoint)
     else:
-        return f"{responses}"
+        return render_template('results.html', title=active_survey.title, results=responses)
 
 
 def get_redirect(num=None):
