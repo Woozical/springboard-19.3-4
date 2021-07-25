@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, flash
 from flask_debugtoolbar import DebugToolbarExtension
 from werkzeug.wrappers import response
 from surveys import *
@@ -70,11 +70,20 @@ def get_redirect(num=None):
     finished = num_of_as == num_of_qs
 
     if not finished:
-        if not num or num > num_of_qs or num > num_of_as:
+        if not num:
+            flash("Please complete the survey first!")
             current_q = num_of_as
             return f"/questions/{current_q}"
+        elif num > num_of_qs:
+            flash("That is not a valid question.")
+            current_q = num_of_as
+            return f"/questions/{current_q}"
+        elif num > num_of_as:
+            flash("Please complete the survey in order.")
+            current_q = num_of_as
+            return f"/questions/{current_q}"
+
     else:
         if num > num_of_qs:
+            flash("That is not a valid question.")
             return "/results"
-        else:
-            return f"/questions/{num}"
