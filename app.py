@@ -1,6 +1,5 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, session
 from flask_debugtoolbar import DebugToolbarExtension
-from werkzeug.wrappers import response
 from surveys import *
 
 app = Flask(__name__)
@@ -9,7 +8,6 @@ app.config['SECRET_KEY'] = 'lofthousesugarcookies'
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 debug = DebugToolbarExtension(app)
 
-responses = {}
 active_survey = satisfaction_survey
 
 @app.route('/')
@@ -21,7 +19,7 @@ def home_view():
 @app.route('/questions/<int:num>')
 def question_view(num):
     # Redirect if user manually enters url to try and jump questions
-    if num > len(responses):
+    if num > len(session['responses']):
         endpoint = get_redirect(num)
         return redirect(endpoint)
     
@@ -32,9 +30,13 @@ def question_view(num):
 def answer_response():
     q_num = int(request.form['question'])
     a_num = int(request.form['answer'])
+
     question = active_survey.questions[q_num]
     answer = question.choices[a_num]
+
+    responses = session['responses']
     responses[question.question] = answer
+    session['responses'] = responses
     if q_num + 1 == len(active_survey.questions):
         return redirect("/results")
     else:
@@ -42,12 +44,16 @@ def answer_response():
 
 @app.route('/results')
 def results_view():
-    if len(responses) != len(active_survey.questions):
+    if len(session['responses']) != len(active_survey.questions):
         endpoint = get_redirect()
         return redirect(endpoint)
     else:
-        return render_template('results.html', title=active_survey.title, results=responses)
+        return render_template('results.html', title=active_survey.title, results=session['responses'])
 
+@app.route('/start', methods=["POST"])
+def start_survey():
+    session['responses'] = {}
+    return redirect('/questions/0')
 
 def get_redirect(num=None):
     """Given an attempted jump to a specific question or the end results, return the page
@@ -65,7 +71,7 @@ def get_redirect(num=None):
     """
 
     num_of_qs = len(active_survey.questions)
-    num_of_as = len(responses)
+    num_of_as = len(session['responses'])
 
     finished = num_of_as == num_of_qs
 
